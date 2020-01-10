@@ -278,6 +278,9 @@ def query(
     referrer (str|None) A referrer string to help locate the origin of this query.
     auto_fields (bool) Set to true to have project + eventid fields automatically added.
     """
+    if not selected_columns:
+        raise InvalidSearchQuery("No fields provided")
+
     snuba_filter = get_filter(query, params)
 
     # TODO(mark) Refactor the need for this translation shim once all of
@@ -288,10 +291,10 @@ def query(
         "end": snuba_filter.end,
         "conditions": snuba_filter.conditions,
         "filter_keys": snuba_filter.filter_keys,
+        "having": snuba_filter.having,
         "orderby": orderby,
     }
-    if not selected_columns:
-        raise InvalidSearchQuery("No fields provided")
+
     snuba_args.update(resolve_field_list(selected_columns, snuba_args, auto_fields=auto_fields))
 
     if reference_event:
@@ -310,6 +313,7 @@ def query(
         aggregations=snuba_args.get("aggregations"),
         selected_columns=snuba_args.get("selected_columns"),
         filter_keys=snuba_args.get("filter_keys"),
+        having=snuba_args.get("having"),
         orderby=snuba_args.get("orderby"),
         dataset=Dataset.Discover,
         limit=limit,
@@ -348,6 +352,7 @@ def timeseries_query(selected_columns, query, params, rollup, reference_event=No
         "end": snuba_filter.end,
         "conditions": snuba_filter.conditions,
         "filter_keys": snuba_filter.filter_keys,
+        "having": snuba_filter.having,
     }
     if not snuba_args["start"] and not snuba_args["end"]:
         raise InvalidSearchQuery("Cannot get timeseries result without a start and end.")
@@ -372,6 +377,7 @@ def timeseries_query(selected_columns, query, params, rollup, reference_event=No
         aggregations=snuba_args.get("aggregations"),
         conditions=snuba_args.get("conditions"),
         filter_keys=snuba_args.get("filter_keys"),
+        having=snuba_args.get("having"),
         start=snuba_args.get("start"),
         end=snuba_args.get("end"),
         rollup=rollup,
@@ -443,6 +449,7 @@ def get_facets(query, params, limit=10, referrer=None):
         "end": snuba_filter.end,
         "conditions": snuba_filter.conditions,
         "filter_keys": snuba_filter.filter_keys,
+        "having": snuba_filter.having,
     }
     # Resolve the public aliases into the discover dataset names.
     snuba_args, translated_columns = resolve_discover_aliases(snuba_args)
@@ -463,7 +470,7 @@ def get_facets(query, params, limit=10, referrer=None):
         filter_keys=snuba_args.get("filter_keys"),
         orderby=["-count", "tags_key"],
         groupby="tags_key",
-        having=[excluded_tags],
+        having=[excluded_tags] + snuba_args.get("having"),
         dataset=Dataset.Discover,
         limit=limit,
         referrer=referrer,
