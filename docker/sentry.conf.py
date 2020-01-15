@@ -7,6 +7,7 @@ from __future__ import absolute_import
 # For Docker, the following environment variables are supported:
 #  SENTRY_POSTGRES_HOST
 #  SENTRY_POSTGRES_PORT
+#  SENTRY_POSTGRES_OPTIONS
 #  SENTRY_DB_NAME
 #  SENTRY_DB_USER
 #  SENTRY_DB_PASSWORD
@@ -37,9 +38,13 @@ from sentry.utils.types import Bool
 
 import os
 import os.path
+import json
 
 CONF_ROOT = os.path.dirname(__file__)
 env = os.environ.get
+
+# Raises JSONDecodeError when invalid JSON
+postgres_options = json.loads(env('SENTRY_POSTGRES_OPTIONS')) or {}
 
 postgres = env('SENTRY_POSTGRES_HOST') or (env('POSTGRES_PORT_5432_TCP_ADDR') and 'postgres')
 if postgres:
@@ -66,6 +71,7 @@ if postgres:
                 env('SENTRY_POSTGRES_PORT')
                 or ''
             ),
+            'OPTIONS': postgres_options
         },
     }
 
